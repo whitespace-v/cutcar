@@ -1,0 +1,51 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:16.4
+    ports:
+      - "5432:5432"
+    hostname: db
+    volumes:
+      - database:/var/lib/postgresql/data
+    env_file:
+      - .postgres.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cutcar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+  adminer:
+    container_name: adminer
+    image: adminer:latest
+    restart: always
+    ports:
+      - "8080:8080"
+  # client:
+  #   build:
+  #     context: ./client
+  #     dockerfile: Dockerfile
+  #   container_name: client
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./client/.env:/client/.env
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: backend
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   links:
+  #     - postgres
+  #   environment:
+  #     PRISMA_CLI_BINARY_TARGETS: "debian-openssl-1.1.x"
+  #   volumes:
+  #     - ./backend:/backend
+  #     - ./backend/.env:/backend/.env
+volumes:
+  database:
