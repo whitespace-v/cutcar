@@ -27,7 +27,6 @@ class API {
     this.app.group("/users", (app) => app.use(Router.users));
   }
   async init() {
-    this.app.get("/", () => "Hello Elysia");
     this.app.listen(process.env.PORT || 5000);
   }
 }

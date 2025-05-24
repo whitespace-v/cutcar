@@ -1,6 +1,7 @@
 import axios from "axios";
 import csv from "csvtojson";
 import iconv from "iconv-lite";
+import { Pool } from "../utils/Pool";
 
 export class DataController {
   static async fetch() {
@@ -26,31 +27,61 @@ export class DataController {
           .map((a) => a.trim());
 
         const item = {
-          Артикул: arr[0],
-          Наименование: arr[1],
-          Марка: arr[2],
-          Модель: arr[3],
-          Год: arr[4],
-          Кузов: arr[5],
-          Двигатель: arr[6],
-          "Верх/Низ": arr[7],
-          "Перед/Зад": arr[8],
-          "Лев/Прав": arr[9],
-          Цвет: arr[10],
-          Номер: arr[11],
-          Комментарий: arr[12],
-          Цена: arr[13],
-          Производитель: arr[14],
-          Фото: arr[15].split(",").map((a) => a.trim()),
-          "Новый/БУ": arr[16],
-          Статус: arr[17],
+          article: Number(arr[0]),
+          name: arr[1],
+          make: arr[2],
+          model: arr[3],
+          year: arr[4],
+          body: arr[5],
+          engine: arr[6],
+          top_bottom: arr[7],
+          front_rear: arr[8],
+          left_right: arr[9],
+          color: arr[10],
+          number: arr[11],
+          comment: arr[12],
+          price: Number(arr[13]),
+          manufacturer: arr[14],
+          photo: arr[15]
+            .split(",")
+            .map((a) => a.trim())
+            .toString(),
+          new_used: arr[16],
+          status: arr[17],
         };
-        // 1. check if exists in bd, if it doesn't -> create with date & rating 1000
-        // 2. if yes -> change rating [1000max-1min]
-        // 3. if in bd but not in csv -> status SOLD (check where check_timestamp < now-10h)
         items.push(item);
       }
+      const bd_items = await Pool.conn.data.findMany();
+      // есть в цсв но нет в бд -> добавляем новый товар
+      const news = items
+        .filter((o1) => !bd_items.some((o2) => o1.article === o2.article))
+        .map((item) => ({ ...item, arrived: new Date().getTime(), sold: 0 }));
 
+      await Pool.conn.data.createMany({
+        data: news,
+      });
+
+      // есть в бд но нет в цсв -> товар продан
+      const sold = bd_items
+        .filter((o1) => !items.some((o2) => o1.article === o2.article))
+        .map((item) => ({
+          ...item,
+          sold: new Date().getTime(),
+          status: "Продано",
+        }));
+
+      await Pool.conn.$transaction(async (tx) => {
+        for (const item of sold) {
+          await tx.data.update({
+            where: {
+              article: item.article, // Условие для поиска записи
+            },
+            data: {
+              ...item, // Данные для обновления
+            },
+          });
+        }
+      });
       return jsonArray;
     } catch (error) {
       console.error("Error fetching or parsing CSV:", error.message);
@@ -58,5 +89,22 @@ export class DataController {
     }
   }
 
-  static async get() {}
+  static async collect({ limit, offset }: { limit: string; offset: string }) {
+    try {
+      const items = await Pool.conn.data.findMany({
+        take: Number(limit),
+        skip: Number(offset),
+      });
+
+      return {
+        items: JSON.stringify(items, (_, v) =>
+          typeof v === "bigint" ? v.toString() : v
+        ),
+        count: await Pool.conn.data.count(),
+      };
+    } catch (e) {
+      console.error("Error fetching or parsing CSV:", e.message);
+      throw e;
+    }
+  }
 }

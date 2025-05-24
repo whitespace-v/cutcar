@@ -8,9 +8,33 @@ datasource db {
 }
 
 model User {
- id         Int       @id @default(autoincrement())
- login      String    @unique
- password   String
- created_at DateTime  @default(now())
- updated_at DateTime?
+  id             Int              @id @default(autoincrement())
+  login          String           @unique
+  password       String
+  created_at     DateTime         @default(now())
+  updated_at     DateTime?
+}
+
+model Data {
+  id              Int             @id @default(autoincrement())
+  article         BigInt          @unique
+  name            String?
+  make            String?
+  model           String?
+  year            String?
+  body            String?
+  engine          String?
+  top_bottom      String?
+  front_rear      String?
+  left_right      String?
+  color           String?
+  number          String?
+  comment         String?
+  price           Int?
+  manufacturer    String?
+  photo           String?
+  new_used        String?
+  status          String?
+  arrived         BigInt?
+  sold            BigInt?
 }
