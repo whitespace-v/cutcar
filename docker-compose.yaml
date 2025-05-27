@@ -4,7 +4,6 @@ services:
     image: postgres:16.4
     ports:
       - "5432:5432"
-    hostname: db
     volumes:
       - database:/var/lib/postgresql/data
     env_file:
@@ -15,37 +14,51 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    networks:
+      - app-network
   adminer:
     container_name: adminer
     image: adminer:latest
     restart: always
     ports:
       - "8080:8080"
-  # client:
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
-  #   container_name: client
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./client/.env:/client/.env
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: backend
-  #   ports:
-  #     - "5000:5000"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   links:
-  #     - postgres
-  #   environment:
-  #     PRISMA_CLI_BINARY_TARGETS: "debian-openssl-1.1.x"
-  #   volumes:
-  #     - ./backend:/backend
-  #     - ./backend/.env:/backend/.env
+    networks:
+      - app-network
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - server
+    networks:
+      - app-network
+    restart: always
+    volumes:
+      - ./client/.env:/client/.env
+    command: bun run start
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: always
+    volumes:
+      - ./server/.env:/server/.env
+    command: bun run start # Предполагается, что сервер компилируется в dist/index.js
+networks:
+  app-network:
+    name: app-network
 volumes:
   database:

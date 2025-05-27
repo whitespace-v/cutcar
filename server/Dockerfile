@@ -1,12 +1,21 @@
-FROM library/postgres
-COPY prisma/init.sql /docker-entrypoint-initdb.d/
-FROM oven/bun:1 AS base
+FROM oven/bun:latest AS base
 WORKDIR /app
-COPY package.json .
-FROM base AS install
+
+COPY package*.json ./
+COPY bun.lockb ./
 RUN bun install
+
 COPY . .
-ENV NODE_ENV=production
+
+# Генерация Prisma
+COPY prisma ./prisma
 RUN bunx prisma generate
+
+# Сборка
+RUN bun run build 
+# Предполагается, что есть скрипт build в package.json
+
+# Запуск приложения
 EXPOSE 5000
-CMD ["bun", "run", "start"]
+CMD ["bun", "run", "start"] 
+# Предполагается, что есть скрипт start в package.json

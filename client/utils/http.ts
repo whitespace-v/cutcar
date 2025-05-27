@@ -1,4 +1,5 @@
 import axios from "axios";
+import qs from "qs";
 
 export class AxiosInterceptor {
   //  @ts-expect-error environment variable may be missing
@@ -15,6 +16,9 @@ export class AxiosInterceptor {
       const { data: body } = await axios.get(this.baseURL + endpoint, {
         params,
         headers: this.headers,
+        paramsSerializer: (params) => {
+          return qs.stringify(params, { arrayFormat: "repeat" }); // Use 'repeat' to avoid []
+        },
       });
       return body;
     } catch (error) {

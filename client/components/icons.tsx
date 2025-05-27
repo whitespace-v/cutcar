@@ -185,7 +185,16 @@ export const SearchIcon = (props: IconSvgProps) => (
     />
   </svg>
 );
-export const VerticalDotsIcon = ({ size = 24, width, height, ...props }) => {
+export const VerticalDotsIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: {
+  size: number;
+  width: number;
+  height: number;
+}) => {
   return (
     <svg
       aria-hidden="true"

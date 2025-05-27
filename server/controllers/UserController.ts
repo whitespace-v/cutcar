@@ -1,17 +1,23 @@
 import { Pool } from "../utils/Pool";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { Tokenizer } from "../utils/Tokenizer";
 import { Responder } from "../utils/Responder";
 
 export class UserController {
-  static async signin({ login, pwd }: { login: string; pwd: string }) {
+  static async signin({
+    login,
+    password,
+  }: {
+    login: string;
+    password: string;
+  }) {
     try {
       const user = await Pool.conn.user.findUnique({
         where: { login },
       });
       if (user) {
-        if (bcrypt.compareSync(pwd, user.password)) {
-          Responder.ok({
+        if (bcrypt.compareSync(password, user.password)) {
+          return Responder.ok({
             token: Tokenizer.generate(user),
           });
         } else {
@@ -27,16 +33,15 @@ export class UserController {
   }
   static async signup({
     login,
-    pwd,
-    secret_key,
+    password,
+    key,
   }: {
-    secret_key: string;
+    key: string;
     login: string;
-    pwd: string;
+    password: string;
   }) {
     try {
-      if (secret_key !== "205002")
-        return Responder.forbidden("Некорректные данные");
+      if (key !== "205002") return Responder.forbidden("Некорректные данные");
 
       const candidate = await Pool.conn.user.findUnique({
         where: { login },
@@ -48,7 +53,7 @@ export class UserController {
         const user = await Pool.conn.user.create({
           data: {
             login,
-            password: await bcrypt.hash(pwd, 15),
+            password: await bcrypt.hash(password, 15),
           },
         });
         return Responder.ok({

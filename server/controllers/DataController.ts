@@ -54,7 +54,9 @@ export class DataController {
       const bd_items = await Pool.conn.data.findMany();
       // есть в цсв но нет в бд -> добавляем новый товар
       const news = items
-        .filter((o1) => !bd_items.some((o2) => o1.article === o2.article))
+        .filter(
+          (o1) => !bd_items.some((o2) => o1.article === Number(o2.article))
+        )
         .map((item) => ({ ...item, arrived: new Date().getTime(), sold: 0 }));
 
       await Pool.conn.data.createMany({
@@ -63,7 +65,7 @@ export class DataController {
 
       // есть в бд но нет в цсв -> товар продан
       const sold = bd_items
-        .filter((o1) => !items.some((o2) => o1.article === o2.article))
+        .filter((o1) => !items.some((o2) => Number(o1.article) === o2.article))
         .map((item) => ({
           ...item,
           sold: new Date().getTime(),
@@ -89,21 +91,83 @@ export class DataController {
     }
   }
 
-  static async collect({ limit, offset }: { limit: string; offset: string }) {
+  static async collect({
+    limit,
+    offset,
+    status,
+    query,
+    column,
+    direction,
+  }: {
+    limit: string;
+    offset: string;
+    status: string;
+    query: string;
+    column: string;
+    direction: string;
+  }) {
     try {
+      const searchTerms = query
+        ? query
+            .trim()
+            .split(/\s+/)
+            .filter((term) => term.length > 2) // Игнорируем короткие слова, можно настроить
+        : [];
+
+      const where = {
+        ...(status === "all" ? {} : { status }),
+        ...(searchTerms.length > 0
+          ? {
+              AND: searchTerms.map((term) => {
+                // numbers
+                const numericTerm = Number(term);
+                const articleCondition = !isNaN(numericTerm)
+                  ? [{ article: { equals: numericTerm } }]
+                  : [];
+
+                // string
+                const stringConditions = [
+                  { name: { contains: term, mode: "insensitive" } },
+                  { make: { contains: term, mode: "insensitive" } },
+                  { model: { contains: term, mode: "insensitive" } },
+                  { year: { contains: term, mode: "insensitive" } },
+                  { engine: { contains: term, mode: "insensitive" } },
+                  { body: { contains: term, mode: "insensitive" } },
+                  { top_bottom: { contains: term, mode: "insensitive" } },
+                  { front_rear: { contains: term, mode: "insensitive" } },
+                  { left_right: { contains: term, mode: "insensitive" } },
+                  { color: { contains: term, mode: "insensitive" } },
+                  { number: { contains: term, mode: "insensitive" } },
+                  { comment: { contains: term, mode: "insensitive" } },
+                  { new_used: { contains: term, mode: "insensitive" } },
+                ];
+                return {
+                  OR: [...articleCondition, ...stringConditions],
+                };
+              }),
+            }
+          : {}),
+      };
+
       const items = await Pool.conn.data.findMany({
         take: Number(limit),
         skip: Number(offset),
+        where,
+        orderBy: column
+          ? {
+              [column]: direction === "ascending" ? "asc" : "desc",
+            }
+          : { article: "asc" },
       });
 
       return {
         items: JSON.stringify(items, (_, v) =>
           typeof v === "bigint" ? v.toString() : v
         ),
-        count: await Pool.conn.data.count(),
+        count: await Pool.conn.data.count({ where }),
       };
     } catch (e) {
-      console.error("Error fetching or parsing CSV:", e.message);
+      console.error("Error fetching or parsing CSV:", e);
       throw e;
     }
   }

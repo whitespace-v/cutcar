@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -13,49 +13,60 @@ import {
   Dropdown,
   DropdownMenu,
   DropdownItem,
-  Chip,
-  User,
   Pagination,
-  Select,
-  SelectItem,
   Spinner,
+  SortDescriptor,
+  Selection,
 } from "@heroui/react";
-import {
-  ChevronDownIcon,
-  SearchIcon,
-  VerticalDotsIcon,
-} from "@/components/icons";
-import { capitalize } from "@/components/primitives";
-import { AxiosInterceptor } from "@/utils/http";
-import { columns, INITIAL_VISIBLE_COLUMNS, limits, statusOptions } from "./map";
+import { useDebounceCallback, useLocalStorage } from "usehooks-ts";
+import { useRouter } from "next/navigation";
+
+import { columns, INITIAL_VISIBLE_COLUMNS, statusOptions } from "./map";
 import { renderCell } from "./lib/renderCell";
 import { IItem } from "./models";
 
+import { ChevronDownIcon, SearchIcon } from "@/components/icons";
+import { capitalize } from "@/components/primitives";
+import { AxiosInterceptor } from "@/utils/http";
+
 export default function App() {
-  const [filterValue, setFilterValue] = React.useState("");
-  const [visibleColumns, setVisibleColumns] = React.useState<
-    Set<string> | "all"
-  >(new Set(INITIAL_VISIBLE_COLUMNS));
-  const [statusFilter, setStatusFilter] = React.useState("all");
-  const [sortDescriptor, setSortDescriptor] = React.useState({
-    column: "age",
-    direction: "ascending",
-  });
+  const [value, setValue, removeValue] = useLocalStorage("token", "");
+  const router = useRouter();
+
+  useEffect(() => {
+    !value && router.push("/signin");
+  }, [value]);
+
+  const [visibleColumns, setVisibleColumns] = React.useState<Selection>(
+    new Set(INITIAL_VISIBLE_COLUMNS),
+  );
+  const [statusFilter, setStatusFilter] = React.useState<Selection>("all");
   const [page, setPage] = React.useState(1);
   const [pages, setPages] = React.useState(1);
   const [items, setItems] = React.useState([]);
   const [count, setCount] = React.useState(0);
-  const [limit, setLimit] = React.useState(50);
+  const [limit, setLimit] = React.useState(12);
   const [loading, setLoading] = React.useState<boolean>(true);
+
+  const [query, setQuery] = useState<string>("");
+  const debounced = useDebounceCallback(setQuery, 500);
+
+  const [sort, setSort] = React.useState<SortDescriptor>({
+    column: "article",
+    direction: "ascending",
+  });
 
   useEffect(() => {
     getItems();
-  }, [page, limit]);
+  }, [page, limit, statusFilter, query, sort]);
 
   const getItems = async () => {
     setLoading(true);
-
     const data = await AxiosInterceptor.$get("/data/collect", {
+      status: statusFilter === "all" ? ["all"] : Array.from(statusFilter),
+      column: sort.column,
+      direction: sort.direction,
+      query,
       limit,
       offset: (page - 1) * limit,
     });
@@ -66,55 +77,27 @@ export default function App() {
     setLoading(false);
   };
 
-  const hasSearchFilter = Boolean(filterValue);
-
-  const headerColumns = React.useMemo(() => {
+  const headerColumns = () => {
     if (visibleColumns === "all") return columns;
 
     return columns.filter((column) =>
       Array.from(visibleColumns).includes(column.uid),
     );
-  }, [visibleColumns]);
+  };
 
-  const onNextPage = React.useCallback(() => {
+  const onNextPage = () => {
     if (page < pages) {
       setPage(page + 1);
     }
-  }, [page, pages]);
+  };
 
-  const memoizedRenderCell = React.useCallback(
-    (item: IItem, columnKey: string) => {
-      return renderCell(item, columnKey);
-    },
-    [],
-  );
-
-  const onPreviousPage = React.useCallback(() => {
+  const onPreviousPage = () => {
     if (page > 1) {
       setPage(page - 1);
     }
-  }, [page]);
+  };
 
-  const onLimitChange = React.useCallback((n: number) => {
-    setLimit(n);
-    setPage(1);
-  }, []);
-
-  const onSearchChange = React.useCallback((value) => {
-    if (value) {
-      setFilterValue(value);
-      setPage(1);
-    } else {
-      setFilterValue("");
-    }
-  }, []);
-
-  const onClear = React.useCallback(() => {
-    setFilterValue("");
-    setPage(1);
-  }, []);
-
-  const topContent = React.useMemo(() => {
+  const topContent = () => {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-between gap-3 items-end">
@@ -123,9 +106,8 @@ export default function App() {
             className="w-full sm:max-w-[44%]"
             placeholder="Введите запрос..."
             startContent={<SearchIcon />}
-            value={filterValue}
-            onClear={() => onClear()}
-            onValueChange={onSearchChange}
+            onChange={(e) => debounced(e.currentTarget.value)}
+            onClear={() => debounced("")}
           />
           <div className="flex gap-3">
             <Dropdown>
@@ -176,9 +158,12 @@ export default function App() {
                 ))}
               </DropdownMenu>
             </Dropdown>
+            <Button className="bg-red-500" onPress={() => removeValue()}>
+              Выход
+            </Button>
           </div>
         </div>
-        <div className="flex justify-between items-center">
+        {/* <div className="flex justify-between items-center">
           <span className="text-default-400 text-small">
             Всего позиций: {count}
           </span>
@@ -194,32 +179,26 @@ export default function App() {
           >
             {(limit) => <SelectItem key={limit.key}>{limit.label}</SelectItem>}
           </Select>
-        </div>
+        </div> */}
       </div>
     );
-  }, [
-    filterValue,
-    statusFilter,
-    visibleColumns,
-    onLimitChange,
-    items.length,
-    onSearchChange,
-    hasSearchFilter,
-    limit,
-  ]);
+  };
 
-  const bottomContent = React.useMemo(() => {
+  const bottomContent = () => {
     return (
       <div className="py-2 px-2 flex justify-between items-center">
         <Pagination
           isCompact
           showControls
           showShadow
-          color="primary"
+          color="default"
           page={page}
           total={pages}
           onChange={setPage}
         />
+        <span className="text-default-400 text-small">
+          Всего позиций: {count}
+        </span>
         <div className="hidden sm:flex w-[30%] justify-end gap-2">
           <Button
             isDisabled={pages === 1}
@@ -240,23 +219,34 @@ export default function App() {
         </div>
       </div>
     );
-  }, [items.length, page, pages, hasSearchFilter]);
+  };
+  const [shouldRender, setShouldRender] = useState(true);
+
+  useEffect(() => {
+    if (!value) {
+      setShouldRender(false);
+    }
+  }, []);
+
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <Table
       isHeaderSticky
       aria-label="Example table with custom cells, pagination and sorting"
-      bottomContent={bottomContent}
+      bottomContent={bottomContent()}
       bottomContentPlacement="outside"
       classNames={{
-        wrapper: "max-h-[600px]",
+        wrapper: "max-h-[1000px] overflow-visible",
       }}
-      sortDescriptor={sortDescriptor}
-      topContent={topContent}
+      sortDescriptor={sort}
+      topContent={topContent()}
       topContentPlacement="outside"
-      onSortChange={setSortDescriptor}
+      onSortChange={setSort}
     >
-      <TableHeader columns={headerColumns}>
+      <TableHeader columns={headerColumns()}>
         {(column) => (
           <TableColumn
             key={column.uid}
@@ -269,14 +259,14 @@ export default function App() {
       </TableHeader>
       <TableBody
         emptyContent={"Позиции не найдены."}
-        items={items}
         isLoading={loading}
+        items={items}
         loadingContent={<Spinner label="Загрузка..." />}
       >
         {(item: IItem) => (
           <TableRow key={item.id}>
             {(columnKey) => (
-              <TableCell>{memoizedRenderCell(item, columnKey)}</TableCell>
+              <TableCell>{renderCell(item, columnKey)}</TableCell>
             )}
           </TableRow>
         )}
