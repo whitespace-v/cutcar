@@ -24,39 +24,39 @@ services:
       - "8080:8080"
     networks:
       - app-network
-  # client:
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - NODE_ENV=production
-  #   depends_on:
-  #     - server
-  #   networks:
-  #     - app-network
-  #   restart: always
-  #   volumes:
-  #     - ./client/.env:/client/.env
-  #   command: bun run start
-  # server:
-  #   build:
-  #     context: ./server
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "5000:5000"
-  #   environment:
-  #     - NODE_ENV=production
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - app-network
-  #   restart: always
-  #   volumes:
-  #     - ./server/.env:/server/.env
-  #   command: bun run start # Предполагается, что сервер компилируется в dist/index.js
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - server
+    networks:
+      - app-network
+    restart: always
+    volumes:
+      - ./client/.env:/client/.env
+    command: bun run start
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: always
+    volumes:
+      - ./server/.env:/server/.env
+    command: bun run start # Предполагается, что сервер компилируется в dist/index.js
 networks:
   app-network:
     name: app-network
