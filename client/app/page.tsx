@@ -82,7 +82,7 @@ export default function App() {
 
     setItems(JSON.parse(data.items));
     setCount(JSON.parse(data.count));
-    setPages(Math.round(JSON.parse(data.count) / limit));
+    setPages(Math.ceil(JSON.parse(data.count) / limit));
     setLoading(false);
   };
 

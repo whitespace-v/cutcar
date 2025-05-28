@@ -155,39 +155,42 @@ export class DataController {
       let items;
 
       if (column === "rating") {
-        // 1. Build the search conditions (joined with OR)
-        const searchConditions = searchTerms.flatMap((term) =>
-          fields.map(
-            (field) =>
-              Prisma.sql`"${Prisma.raw(field)}" ILIKE ${"%" + term + "%"}`
-          )
-        );
-
-        // Build the status condition (if needed)
-        const and_conditions = [
-          status !== "all" ? Prisma.sql`"status" = ${status}` : null,
-        ].filter(Boolean); // <-- filter out null
-
-        // Combine all conditions
-        const allConditions = [];
-
-        if (searchConditions.length > 0) {
-          // Group search conditions with parentheses
-          allConditions.push(
-            Prisma.sql`(${Prisma.join(searchConditions, " OR ")})`
-          );
+        function escapeLike(term: string) {
+          return term.replace(/[%_]/g, (c) => "\\" + c);
         }
 
-        // Add AND conditions (if any)
-        allConditions.push(...and_conditions); // <-- spread, not loop
+        // 1. Create OR groups for each term
+        const searchGroups = searchTerms.map(
+          (term) =>
+            Prisma.sql`(${Prisma.join(
+              fields.map(
+                (field) =>
+                  Prisma.sql`"${Prisma.raw(field)}" ILIKE ${
+                    "%" + escapeLike(term) + "%"
+                  } ESCAPE '\\'`
+              ),
+              " OR "
+            )})`
+        );
 
-        // Final WHERE clause (join with AND)
+        // 2. Build conditions list
+        const allConditions = [];
+
+        if (searchGroups.length > 0) {
+          allConditions.push(Prisma.join(searchGroups, " AND "));
+        }
+
+        if (status !== "all") {
+          allConditions.push(Prisma.sql`"status" = ${status}`);
+        }
+
+        // 3. Final WHERE clause
         const whereClause =
           allConditions.length > 0
             ? Prisma.join(allConditions, " AND ")
             : Prisma.sql`TRUE`;
 
-        // Use in your query
+        // 4. Use in query
         items = await Pool.conn.$queryRaw`
           SELECT * FROM "Data"
           WHERE ${whereClause}
