@@ -4,6 +4,7 @@ WORKDIR /app
 # Установка зависимостей
 COPY package*.json ./
 COPY bun.lockb ./
+RUN bun add -g dotenv-cli 
 RUN bun install
 
 # Копирование исходного кода
