@@ -7,16 +7,16 @@ import { IItem } from "../models";
 import { timeToDate } from "@/utils/timeToDate";
 
 export const renderCell = (item: IItem, columnKey: React.Key) => {
-  // const cellValue = item[columnKey];
   switch (columnKey) {
+    case "sold":
+      return <div>{item.sold > 0 && timeToDate(item.sold)}</div>;
     case "price":
       return <div>{item.price.toLocaleString("us")} ₽</div>;
     case "status":
       return (
         <div className="flex flex-col">
-          {/* <p className="text-bold text-small capitalize"></p> */}
           <Chip color={item.status === "Продано" ? "success" : "default"}>
-            {item.status} {item.sold > 0 && timeToDate(item.sold)}
+            {item.status}
           </Chip>
         </div>
       );

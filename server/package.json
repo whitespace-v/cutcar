@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "bun build index.ts --outdir ./dist --target node",
-    "start": "bun run dist/index.js",
-    "dev": "bun --watch src/index.ts"
+    "start": "bun --env-file=.env.prod run dist/index.js",
+    "dev": "bun --env-file=.env.dev --watch index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"

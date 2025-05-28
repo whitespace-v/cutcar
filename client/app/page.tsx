@@ -60,10 +60,19 @@ export default function App() {
     getItems();
   }, [page, limit, statusFilter, query, sort]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [limit, statusFilter, query, sort]);
+
   const getItems = async () => {
     setLoading(true);
     const data = await AxiosInterceptor.$get("/data/collect", {
-      status: statusFilter === "all" ? ["all"] : Array.from(statusFilter),
+      status:
+        statusFilter instanceof Set
+          ? statusFilter.size > 1
+            ? "all"
+            : Array.from(statusFilter)[0]
+          : statusFilter,
       column: sort.column,
       direction: sort.direction,
       query,
@@ -79,7 +88,6 @@ export default function App() {
 
   const headerColumns = () => {
     if (visibleColumns === "all") return columns;
-
     return columns.filter((column) =>
       Array.from(visibleColumns).includes(column.uid),
     );

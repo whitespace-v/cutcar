@@ -2,6 +2,7 @@ import axios from "axios";
 import csv from "csvtojson";
 import iconv from "iconv-lite";
 import { Pool } from "../utils/Pool";
+import { Prisma } from "@prisma/client";
 
 export class DataController {
   static async fetch() {
@@ -107,6 +108,22 @@ export class DataController {
     direction: string;
   }) {
     try {
+      const fields = [
+        "name",
+        "make",
+        "model",
+        "year",
+        "engine",
+        "body",
+        "top_bottom",
+        "front_rear",
+        "left_right",
+        "color",
+        "number",
+        "comment",
+        "new_used",
+      ];
+
       const searchTerms = query
         ? query
             .trim()
@@ -124,23 +141,10 @@ export class DataController {
                 const articleCondition = !isNaN(numericTerm)
                   ? [{ article: { equals: numericTerm } }]
                   : [];
-
                 // string
-                const stringConditions = [
-                  { name: { contains: term, mode: "insensitive" } },
-                  { make: { contains: term, mode: "insensitive" } },
-                  { model: { contains: term, mode: "insensitive" } },
-                  { year: { contains: term, mode: "insensitive" } },
-                  { engine: { contains: term, mode: "insensitive" } },
-                  { body: { contains: term, mode: "insensitive" } },
-                  { top_bottom: { contains: term, mode: "insensitive" } },
-                  { front_rear: { contains: term, mode: "insensitive" } },
-                  { left_right: { contains: term, mode: "insensitive" } },
-                  { color: { contains: term, mode: "insensitive" } },
-                  { number: { contains: term, mode: "insensitive" } },
-                  { comment: { contains: term, mode: "insensitive" } },
-                  { new_used: { contains: term, mode: "insensitive" } },
-                ];
+                const stringConditions = fields.map((field) => ({
+                  [field]: { contains: term, mode: "insensitive" },
+                }));
                 return {
                   OR: [...articleCondition, ...stringConditions],
                 };
@@ -148,17 +152,63 @@ export class DataController {
             }
           : {}),
       };
+      let items;
 
-      const items = await Pool.conn.data.findMany({
-        take: Number(limit),
-        skip: Number(offset),
-        where,
-        orderBy: column
-          ? {
-              [column]: direction === "ascending" ? "asc" : "desc",
-            }
-          : { article: "asc" },
-      });
+      if (column === "rating") {
+        // 1. Build the search conditions (joined with OR)
+        const searchConditions = searchTerms.flatMap((term) =>
+          fields.map(
+            (field) =>
+              Prisma.sql`"${Prisma.raw(field)}" ILIKE ${"%" + term + "%"}`
+          )
+        );
+
+        // Build the status condition (if needed)
+        const and_conditions = [
+          status !== "all" ? Prisma.sql`"status" = ${status}` : null,
+        ].filter(Boolean); // <-- filter out null
+
+        // Combine all conditions
+        const allConditions = [];
+
+        if (searchConditions.length > 0) {
+          // Group search conditions with parentheses
+          allConditions.push(
+            Prisma.sql`(${Prisma.join(searchConditions, " OR ")})`
+          );
+        }
+
+        // Add AND conditions (if any)
+        allConditions.push(...and_conditions); // <-- spread, not loop
+
+        // Final WHERE clause (join with AND)
+        const whereClause =
+          allConditions.length > 0
+            ? Prisma.join(allConditions, " AND ")
+            : Prisma.sql`TRUE`;
+
+        // Use in your query
+        items = await Pool.conn.$queryRaw`
+          SELECT * FROM "Data"
+          WHERE ${whereClause}
+          ORDER BY ("sold" - "arrived") ${Prisma.raw(
+            direction === "ascending" ? "asc" : "desc"
+          )}
+          LIMIT ${Number(limit)}
+          OFFSET ${Number(offset)}
+        `;
+      } else {
+        items = await Pool.conn.data.findMany({
+          take: Number(limit),
+          skip: Number(offset),
+          where,
+          orderBy: column
+            ? {
+                [column]: direction === "ascending" ? "asc" : "desc",
+              }
+            : { article: "asc" },
+        });
+      }
 
       return {
         items: JSON.stringify(items, (_, v) =>

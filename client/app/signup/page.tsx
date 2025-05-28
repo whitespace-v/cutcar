@@ -4,7 +4,6 @@ import { Form, Input, Button, Link, InputOtp, Spinner } from "@heroui/react";
 import { toast } from "sonner";
 import { useLocalStorage } from "usehooks-ts";
 import { useRouter } from "next/navigation";
-
 import { AxiosInterceptor } from "@/utils/http";
 
 export default function App() {
@@ -63,16 +62,6 @@ export default function App() {
           placeholder="Придумайте пароль"
           type="password"
         />
-
-        {/* <Input
-          isRequired
-          errorMessage="Направильный пароль"
-          label="Ключ"
-          labelPlacement="outside"
-          name="key"
-          placeholder="Введите ключ"
-          type="password"
-        /> */}
 
         <div>
           <div>Ключ</div>

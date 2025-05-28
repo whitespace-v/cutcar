@@ -10,7 +10,7 @@ COPY . .
 # Генерация Prisma
 COPY prisma ./prisma
 RUN bunx prisma generate
-
+RUN bunx prisma migrate dev --name init
 # Сборка
 RUN bun run build 
 # Предполагается, что есть скрипт build в package.json
