@@ -10,7 +10,7 @@ COPY . .
 # Генерация Prisma
 COPY prisma ./prisma
 # Генерить и накатывать миграции придется внутри из под контейнера
-# RUN bunx prisma generate
+RUN bunx prisma generate
 # RUN bunx prisma migrate dev --name init
 # Сборка
 RUN bun run build 
