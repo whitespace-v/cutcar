@@ -99,10 +99,9 @@ export class DataController {
         });
       });
 
-      return jsonArray;
+      return { message: `[TRANSACTION OK] ${new Date()}` };
     } catch (error) {
-      console.error("Error fetching or parsing CSV:", error.message);
-      throw error;
+      return { message: `[TRANSACTION ERROR] ${new Date()}` };
     }
   }
 
