@@ -67,11 +67,16 @@ export class DataController {
       // есть в бд но нет в цсв -> товар продан
       const sold = bd_items
         .filter((o1) => !items.some((o2) => Number(o1.article) === o2.article))
+        .filter((o1) => o1.sold !== null) // фильтр по существующему sold
         .map((item) => ({
           ...item,
-          sold: new Date().getTime(),
+          sold: new Date().getTime(), // перезаписываем sold (может быть не нужно)
           status: "Продано",
         }));
+
+      const threeYearsAgo = new Date();
+      threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+      const threeYearsAgoTimestamp = threeYearsAgo.getTime();
 
       await Pool.conn.$transaction(async (tx) => {
         for (const item of sold) {
@@ -84,7 +89,16 @@ export class DataController {
             },
           });
         }
+
+        await tx.data.deleteMany({
+          where: {
+            sold: {
+              lt: threeYearsAgoTimestamp, // lt — less than, т.е. удаляем всё, что меньше (старше) этой метки
+            },
+          },
+        });
       });
+
       return jsonArray;
     } catch (error) {
       console.error("Error fetching or parsing CSV:", error.message);
