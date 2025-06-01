@@ -67,10 +67,10 @@ export class DataController {
       // есть в бд но нет в цсв -> товар продан
       const sold = bd_items
         .filter((o1) => !items.some((o2) => Number(o1.article) === o2.article))
-        .filter((o1) => o1.sold !== 0) // фильтр по существующему sold
+        .filter((o1) => o1.sold === 0) // перезаписываем только те у которых sold еще не тронут 
         .map((item) => ({
           ...item,
-          sold: new Date().getTime(), // перезаписываем sold (может быть не нужно)
+          sold: new Date().getTime(), 
           status: "Продано",
         }));
 
