@@ -28,14 +28,20 @@ export const renderCell = (item: IItem, columnKey: React.Key) => {
               <Image
                 className="cursor-pointer"
                 radius="sm"
-                src={item.photo.split(",")[0]}
+                src={item.photo.split(",")[0].replace(
+                /^http:\/\/export-content\.baz-on\.ru\/pub\//,
+                "https://cutcar-seller.ru/images/proxy/"
+      )}
                 width={50}
               />
               <div className="absolute hidden -top-[140px] left-[60px] z-50 opacity-0 group-hover:opacity-100 group-hover:block transition-opacity duration-300 ease-in-out w-[300px] h-[300px]">
                 <Image
                   className="w-full h-full object-cover"
                   radius="sm"
-                  src={item.photo.split(",")[0]}
+                  src={item.photo.split(",")[0].replace(
+                /^http:\/\/export-content\.baz-on\.ru\/pub\//,
+                "https://cutcar-seller.ru/images/proxy/"
+      )}
                   width={300}
                 />
               </div>
