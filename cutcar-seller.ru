@@ -1,8 +1,3 @@
-# sudo ln -s /etc/nginx/sites-available/cutcar-seller.ru /etc/nginx/sites-enabled/
-# certbot --nginx
-# sudo systemctl restart nginx
-
-
 upstream client-upstream {
     server    0.0.0.0:3000;
     keepalive 15;
@@ -38,6 +33,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
+    location /images/proxy/ {
+    	proxy_pass http://export-content.baz-on.ru/pub/;
+    	proxy_set_header Host export-content.baz-on.ru;
+    	proxy_hide_header X-Frame-Options;
+    	proxy_hide_header X-Content-Type-Options;
+   	proxy_hide_header Content-Security-Policy;
+    }
     listen 443 ssl; # managed by Certbot
     ssl_certificate /etc/letsencrypt/live/cutcar-seller.ru/fullchain.pem; # managed by Certbot
     ssl_certificate_key /etc/letsencrypt/live/cutcar-seller.ru/privkey.pem; # managed by Certbot
