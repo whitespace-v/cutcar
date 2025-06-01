@@ -23,8 +23,8 @@ class API {
     this.app.use(cors());
   }
   private useRoutes() {
-    this.app.group("/data", (app) => app.use(Router.data));
-    this.app.group("/users", (app) => app.use(Router.users));
+    this.app.group("/api/data", (app) => app.use(Router.data));
+    this.app.group("/api/users", (app) => app.use(Router.users));
   }
   async init() {
     this.app.listen(process.env.PORT || 5000);

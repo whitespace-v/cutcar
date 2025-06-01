@@ -50,7 +50,7 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL="postgresql://postgres:A9kL3mQ7wX2pT5sV8zR1@postgres:5432/cutcar?schema=public"
+        #- DATABASE_URL="postgresql://postgres:A9kL3mQ7wX2pT5sV8zR1@postgres:5432/cutcar?schema=public"
     depends_on:
       postgres:
         condition: service_healthy
