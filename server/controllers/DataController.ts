@@ -66,14 +66,14 @@ export class DataController {
 
       // есть в бд но нет в цсв -> товар продан
       const sold = bd_items
-        .filter((o1) => !items.some((o2) => Number(o1.article) === o2.article))
-        .filter((o1) => o1.sold === 0) // перезаписываем только те у которых sold еще не тронут 
+        .filter((o1) => !items.some((o2) => Number(o1.article) === Number(o2.article)))
+        .filter((o1) => Number(o1.sold) === 0) // перезаписываем только те у которых sold еще не тронут 
         .map((item) => ({
           ...item,
           sold: new Date().getTime(), 
           status: "Продано",
         }));
-
+      console.log(sold.length, news.length)
       const threeYearsAgo = new Date();
       threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
       const threeYearsAgoTimestamp = threeYearsAgo.getTime();
